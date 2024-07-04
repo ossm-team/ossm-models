@@ -2,5 +2,5 @@
 
 ## Planned Features
 
-[] Description files (DFs)
-[] Automatical generate DFs from AngoraPy models
+- [ ] Description files (DFs)
+- [ ] Automatical generate DFs from AngoraPy models
