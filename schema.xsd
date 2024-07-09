@@ -1,29 +1,81 @@
-<?xml version="1.0" encoding="UTF-8" ?>
- <root>
-     <model_name>model_name</model_name>
-     <model_version>1.0</model_version>
-     <classification>
-         <species>species</species>
-         <order>order</order>
-         <coverage>
-             <cortical>true</cortical>
-             <subcortical>false</subcortical>
-             <cerebellar>false</cerebellar>
-             <brainstem>false</brainstem>
-             <spinal>false</spinal>
-             <peripheral>false</peripheral>
-         </coverage>
-         <plausibility>
-             <macro>true</macro>
-             <meso>true</meso>
-             <micro>false</micro>
-         </plausibility>
-     </classification>
-     <interface>
-         <inputs>
-             <sensory></sensory>
-             <auxiliary></auxiliary>
-         </inputs>
-         <outputs></outputs>
-     </interface>
- </root>
+<?xml version="1.0" encoding="utf-8"?>
+
+<xs:schema attributeFormDefault="unqualified" elementFormDefault="qualified" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="model">
+    <xs:complexType>
+      <xs:all>
+        <xs:element minOccurs="1" maxOccurs="1" name="model_name" type="xs:string" />
+        <xs:element minOccurs="1" maxOccurs="1" name="model_version" type="xs:decimal" />
+        <xs:element minOccurs="1" maxOccurs="1" name="classification">
+          <xs:complexType>
+            <xs:all>
+              <xs:element name="order">
+                <xs:simpleType>
+                  <xs:restriction base="xs:string">
+                    <xs:enumeration value="primates" />
+                    <xs:enumeration value="rodents" />
+                    <xs:enumeration value="other" />
+                  </xs:restriction>
+                </xs:simpleType>
+              </xs:element>
+
+              <!-- Species optional to allow for more general models -->
+              <xs:element name="species" minOccurs="0" maxOccurs="1" />
+
+              <xs:element minOccurs="0" name="coverage">
+                <xs:complexType>
+                  <xs:all>
+                    <xs:element minOccurs="0" name="cortical" type="xs:boolean" />
+                    <xs:element minOccurs="0" name="subcortical" type="xs:boolean" />
+                    <xs:element minOccurs="0" name="cerebellar" type="xs:boolean" />
+                    <xs:element minOccurs="0" name="brainstem" type="xs:boolean" />
+                    <xs:element minOccurs="0" name="spinal" type="xs:boolean" />
+                    <xs:element minOccurs="0" name="peripheral" type="xs:boolean" />
+                  </xs:all>
+                </xs:complexType>
+              </xs:element>
+              <xs:element minOccurs="0" name="plausibility">
+                <xs:complexType>
+                  <xs:all>
+                    <xs:element minOccurs="0" name="macro" type="xs:boolean" />
+                    <xs:element minOccurs="0" name="meso" type="xs:boolean" />
+                    <xs:element minOccurs="0" name="micro" type="xs:boolean" />
+                  </xs:all>
+                </xs:complexType>
+              </xs:element>
+            </xs:all>
+          </xs:complexType>
+        </xs:element>
+
+
+        <xs:element minOccurs="0" name="interface">
+          <xs:complexType>
+            <xs:all>
+              <xs:element minOccurs="1" maxOccurs="1" name="inputs">
+                <xs:complexType>
+                  <xs:all>
+                    <xs:element minOccurs="1" name="sensory">
+                      <xs:complexType>
+                        <xs:all>
+                          <xs:element minOccurs="0" name="visual" type="xs:boolean" />
+                          <xs:element minOccurs="0" name="auditory" type="xs:boolean" />
+                          <xs:element minOccurs="0" name="haptic" type="xs:boolean" />
+                          <xs:element minOccurs="0" name="proprioceptive" type="xs:boolean" />
+                          <xs:element minOccurs="0" name="vestibular" type="xs:boolean" />
+                          <xs:element minOccurs="0" name="olfactory" type="xs:boolean" />
+                          <xs:element minOccurs="0" name="gustatory" type="xs:boolean" />
+                        </xs:all>
+                      </xs:complexType>
+                    </xs:element>
+                    <xs:element minOccurs="0" name="auxiliary" />
+                  </xs:all>
+                </xs:complexType>
+              </xs:element>
+              <xs:element minOccurs="1" maxOccurs="1" name="outputs" />
+            </xs:all>
+          </xs:complexType>
+        </xs:element>
+      </xs:all>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>
