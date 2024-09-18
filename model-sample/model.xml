@@ -1,32 +1,35 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 
-<model xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../schema.xsd">
+<model name="model1" author="author1" version="1.0" order="primates"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.w3.org/2001/XMLSchema ../schema.xsd">
+    <plausibility>
+        <macro>true</macro>
+        <meso>true</meso>
+        <micro>true</micro>
+    </plausibility>
+    <coverage>
+        <cortical>true</cortical>
+        <subcortical>true</subcortical>
+        <cerebellar>false</cerebellar>
+        <brainstem>false</brainstem>
+        <spinal>false</spinal>
+        <peripheral>false</peripheral>
+    </coverage>
+    <interface>
+        <inputs>
+            <input name="input1" nFeatures="10"/>
+            <input name="input2" nFeatures="20"/>
+        </inputs>
+        <outputs>
+            <output name="output1" nFeatures="10"/>
+            <output name="output2" nFeatures="20"/>
+        </outputs>
+    </interface>
+    <description>
+        Some description
+    </description>
 
-        <model_name>model_name</model_name>
-        <model_version>1.0</model_version>
-        <classification>
-            <species>species</species>
-            <order>primates</order>
-            <coverage>
-                <cortical>true</cortical>
-                <subcortical>false</subcortical>
-                <cerebellar>false</cerebellar>
-                <brainstem>false</brainstem>
-                <spinal>false</spinal>
-                <peripheral>false</peripheral>
-            </coverage>
-            <plausibility>
-                <macro>true</macro>
-                <meso>true</meso>
-                <micro>false</micro>
-            </plausibility>
-        </classification>
-        <interface>
-            <inputs>
-                <sensory></sensory>
-                <auxiliary></auxiliary>
-            </inputs>
-            <outputs></outputs>
-        </interface>
-
+    <neuralRepresentation name="neural1" nFeatures="10"/>
+    <neuralRepresentation name="neural2" nFeatures="20"/>
 </model>

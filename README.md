@@ -3,7 +3,8 @@
 ## Planned Features
 
 - [ ]  Description files (DFs)
-- [ ]  Automatical generate DFs from AngoraPy models
+- [ ]  Standardized API for model interoperability
+- [ ]  Automatically generate DFs from AngoraPy models
 
 
 ## Conventions
