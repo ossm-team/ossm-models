@@ -1,0 +1,2 @@
+class DescriptionError(Exception):
+    pass

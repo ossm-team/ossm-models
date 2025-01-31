@@ -45,7 +45,13 @@
                                     <xs:element minOccurs="1" name="sensory">
                                         <xs:complexType>
                                             <xs:all>
-                                                <xs:element minOccurs="0" name="visual" type="xs:boolean"/>
+                                                <xs:element minOccurs="0" name="visual">
+                                                    <xs:complexType>
+                                                        <xs:attribute name="height" type="xs:integer"/>
+                                                        <xs:attribute name="width" type="xs:integer"/>
+                                                    </xs:complexType>
+                                                </xs:element>
+
                                                 <xs:element minOccurs="0" name="auditory" type="xs:boolean"/>
                                                 <xs:element minOccurs="0" name="haptic" type="xs:boolean"/>
                                                 <xs:element minOccurs="0" name="proprioceptive" type="xs:boolean"/>
@@ -70,7 +76,17 @@
                                 </xs:all>
                             </xs:complexType>
                         </xs:element>
-                        <xs:element minOccurs="1" maxOccurs="1" name="outputs"/>
+                        <xs:element minOccurs="1" maxOccurs="1" name="outputs">
+                            <xs:complexType>
+                                <xs:all>
+                                    <xs:element minOccurs="1" name="motor">
+                                        <xs:complexType>
+                                            <xs:attribute name="nDims" type="xs:integer"/>
+                                        </xs:complexType>
+                                    </xs:element>
+                                </xs:all>
+                            </xs:complexType>
+                        </xs:element>
                     </xs:all>
                 </xs:complexType>
             </xs:element>

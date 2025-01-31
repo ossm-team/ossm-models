@@ -18,18 +18,15 @@
     </coverage>
     <interface>
         <inputs>
-            <input name="input1" nFeatures="10"/>
-            <input name="input2" nFeatures="20"/>
+            <sensory>
+                <visual height="128" width="128"/>
+            </sensory>
         </inputs>
         <outputs>
-            <output name="output1" nFeatures="10"/>
-            <output name="output2" nFeatures="20"/>
+            <motor nDims="24" />
         </outputs>
     </interface>
     <description>
         Some description
     </description>
-
-    <neuralRepresentation name="neural1" nFeatures="10"/>
-    <neuralRepresentation name="neural2" nFeatures="20"/>
 </model>
