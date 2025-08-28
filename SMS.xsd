@@ -1,0 +1,260 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified"
+           targetNamespace="https://ossm.dev/sms/0.5"
+           xmlns="https://ossm.dev/sms/0.5">
+
+    <!-- simple types -->
+    <xs:simpleType name="dir_type">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="in"/>
+            <xs:enumeration value="out"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="modality_type">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="vision"/>
+            <xs:enumeration value="audition"/>
+            <xs:enumeration value="somatosensory"/>
+            <xs:enumeration value="proprioception"/>
+            <xs:enumeration value="interoception"/>
+            <xs:enumeration value="vestibular"/>
+            <xs:enumeration value="language"/>
+            <xs:enumeration value="other"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="dtype_type">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="float8"/>
+            <xs:enumeration value="float16"/>
+            <xs:enumeration value="float32"/>
+            <xs:enumeration value="float64"/>
+            <xs:enumeration value="int8"/>
+            <xs:enumeration value="int16"/>
+            <xs:enumeration value="int32"/>
+            <xs:enumeration value="int64"/>
+            <xs:enumeration value="bool"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- reusable -->
+    <xs:complexType name="shape">
+        <xs:sequence>
+            <xs:element name="dim" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                    <xs:attribute name="name" type="xs:string" use="optional"/>
+                    <xs:attribute name="size" type="xs:integer" use="optional"/> <!-- -1 allowed -->
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+        <xs:attribute name="spec" type="xs:string" use="optional"/> <!-- e.g., "b,h,w,c" -->
+    </xs:complexType>
+
+    <xs:complexType name="port">
+        <xs:sequence>
+            <xs:element name="shape" type="shape" minOccurs="0"/>
+        </xs:sequence>
+        <xs:attribute name="id" type="xs:ID" use="required"/>
+        <xs:attribute name="name" type="xs:string" use="required"/>
+        <xs:attribute name="dir" type="dir_type" use="required">
+            <xs:annotation>
+                <xs:documentation>
+                    Direction of data flow for this port, from the perspective of the module.
+                    "in" means data flows into the module (i.e., input).
+                    "out" means data flows out of the module (i.e., output).
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="dtype" type="dtype_type" use="required"/>
+        <xs:attribute name="description" type="xs:string" use="optional"/>
+    </xs:complexType>
+
+    <!-- metadata/species -->
+    <xs:complexType name="metadata">
+        <xs:sequence>
+            <xs:element name="name" type="xs:string"/>
+            <xs:element name="version" type="xs:string"/>
+            <xs:element name="date" type="xs:date"/>
+            <xs:element name="license" type="xs:string"/>
+            <xs:element name="author" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+            <xs:element name="keyword" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+            <xs:element name="description" type="xs:string" minOccurs="0"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="species">
+        <xs:attribute name="name" type="xs:string" use="required"/>
+        <xs:attribute name="ncbi_taxid" type="xs:string" use="optional"/>
+        <xs:attribute name="scope" type="xs:string" use="optional"/>
+    </xs:complexType>
+
+    <!-- modules -->
+    <xs:complexType name="module">
+        <xs:sequence>
+            <xs:element name="species" type="species" minOccurs="0"/>
+            <xs:element name="io" minOccurs="0">
+                <xs:complexType>
+                    <xs:sequence>
+                        <xs:element name="port" type="port" minOccurs="0" maxOccurs="unbounded"/>
+                    </xs:sequence>
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+        <xs:attribute name="id" type="xs:ID" use="required"/>
+        <xs:attribute name="dt_ms" type="xs:decimal" use="optional">
+            <xs:annotation>
+                <xs:documentation>
+                    Time step for this module, in milliseconds. If not specified, the model time_base is assumed.
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+        <xs:attribute name="region" type="xs:string" use="optional"/>
+        <xs:attribute name="description" type="xs:string" use="optional"/>
+    </xs:complexType>
+
+    <!-- connections -->
+    <xs:complexType name="connection">
+        <xs:attribute name="from" type="xs:IDREF" use="required"/>  <!-- -> port/@id -->
+        <xs:attribute name="to" type="xs:IDREF" use="required"/>  <!-- -> port/@id -->
+        <xs:attribute name="delay_ms" type="xs:decimal" use="optional">
+            <xs:annotation>
+                <xs:documentation>
+                    Transmission delay for this connection, in milliseconds.
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+    </xs:complexType>
+
+    <!-- observables -->
+    <xs:complexType name="observable">
+        <xs:attribute name="id" type="xs:ID" use="required"/>
+        <xs:attribute name="source" type="xs:IDREF" use="required"/> <!-- -> port/@id -->
+        <xs:attribute name="dt_ms" type="xs:decimal" use="optional"/>
+    </xs:complexType>
+
+    <!-- groups & contract -->
+    <xs:complexType name="port_group">
+        <xs:sequence>
+            <xs:element name="member" minOccurs="1" maxOccurs="unbounded">
+                <xs:complexType>
+                    <xs:attribute name="ref" type="xs:IDREF" use="required"/> <!-- -> port/@id -->
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+        <xs:attribute name="id" type="xs:ID" use="required"/>
+        <xs:attribute name="note" type="xs:string" use="optional"/>
+    </xs:complexType>
+
+    <xs:complexType name="contract">
+
+        <xs:sequence>
+            <xs:element name="sensor" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                    <xs:attribute name="name" type="xs:string" use="required"/>
+                    <xs:attribute name="modality" type="modality_type" use="required"/>
+                    <xs:attribute name="maps_to" type="xs:IDREF" use="optional"/>         <!-- -> port/@id -->
+                    <xs:attribute name="maps_to_group" type="xs:IDREF" use="optional"/>   <!-- -> port_group/@id -->
+                </xs:complexType>
+            </xs:element>
+
+            <xs:element name="actuator" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                    <xs:attribute name="name" type="xs:string" use="required"/>
+                    <xs:attribute name="effector" type="xs:string" use="optional"/>
+                    <xs:attribute name="maps_from" type="xs:IDREF" use="optional"/>       <!-- -> port/@id -->
+                    <xs:attribute name="maps_from_group" type="xs:IDREF" use="optional"/> <!-- -> port_group/@id -->
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+
+    </xs:complexType>
+
+    <!-- root -->
+    <xs:element name="model">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="metadata" type="metadata"/>
+                <xs:element name="species" type="species" minOccurs="0"/>
+
+                <xs:element name="time_base" minOccurs="0">
+                    <xs:complexType>
+                        <xs:attribute name="dt_ms" type="xs:decimal" use="optional"/>
+                    </xs:complexType>
+                </xs:element>
+
+                <xs:element name="modules">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="module" type="module" minOccurs="1" maxOccurs="unbounded"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+
+                <xs:element name="port_groups" minOccurs="0">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="port_group" type="port_group" minOccurs="1" maxOccurs="unbounded"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+
+                <xs:element name="connections" minOccurs="0">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="connection" type="connection" minOccurs="1" maxOccurs="unbounded"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+
+                <xs:element name="observables" minOccurs="0">
+                    <xs:complexType>
+                        <xs:sequence>
+                            <xs:element name="observable" type="observable" minOccurs="1" maxOccurs="unbounded"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
+
+                <xs:element name="contract" type="contract" minOccurs="0"/>
+            </xs:sequence>
+        </xs:complexType>
+
+        <!-- keys / refs (XSD 1.0‑friendly) -->
+        <xs:key name="k_module_id">
+            <xs:selector xpath="modules/module"/>
+            <xs:field xpath="@id"/>
+        </xs:key>
+
+        <xs:key name="k_port_id">
+            <xs:selector xpath="modules/module/io/port"/>
+            <xs:field xpath="@id"/>
+        </xs:key>
+
+        <xs:key name="k_group_id">
+            <xs:selector xpath="port_groups/port_group"/>
+            <xs:field xpath="@id"/>
+        </xs:key>
+
+        <xs:keyref name="r_group_member_is_port" refer="k_port_id">
+            <xs:selector xpath="port_groups/port_group/member"/>
+            <xs:field xpath="@ref"/>
+        </xs:keyref>
+
+        <xs:keyref name="r_conn_from_id" refer="k_port_id">
+            <xs:selector xpath="connections/connection"/>
+            <xs:field xpath="@from"/>
+        </xs:keyref>
+
+        <xs:keyref name="r_conn_to_id" refer="k_port_id">
+            <xs:selector xpath="connections/connection"/>
+            <xs:field xpath="@to"/>
+        </xs:keyref>
+
+        <xs:keyref name="r_obs_source_is_port" refer="k_port_id">
+            <xs:selector xpath="observables/observable"/>
+            <xs:field xpath="@source"/>
+        </xs:keyref>
+    </xs:element>
+</xs:schema>

@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<model xmlns="https://ossm.dev/sms/0.5"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="https://ossm.dev/sms/0.5 ../SMS.xsd">
+
+    <metadata>
+        <name>fpn_cereb_grouped_min</name>
+        <version>0.1</version>
+        <date>2025-08-25</date>
+        <license>cc-by-4.0</license>
+        <author>ossm-team</author>
+        <keyword>frontoparietal</keyword>
+        <keyword>cerebellum</keyword>
+    </metadata>
+
+    <species name="homo sapiens" ncbi_taxid="9606" scope="model"/>
+    <time_base dt_ms="1"/>
+
+    <modules>
+        <module id="ppc" dt_ms="5" region="ppc">
+            <io>
+                <port id="ppc_vis_in" name="vis_in" dir="in" dtype="float32">
+                    <shape spec="b,h,w,c">
+                        <dim name="h" size="64"/>
+                        <dim name="w" size="64"/>
+                        <dim name="c" size="1"/>
+                    </shape>
+                </port>
+                <port id="ppc_state_out" name="state_out" dir="out" dtype="float32">
+                    <shape spec="b,f">
+                        <dim name="f" size="128"/>
+                    </shape>
+                </port>
+            </io>
+        </module>
+
+        <module id="pfc" dt_ms="5" region="pfc">
+            <io>
+                <port id="pfc_vis_in" name="vis_in" dir="in" dtype="float32">
+                    <shape spec="b,h,w,c">
+                        <dim name="h" size="64"/>
+                        <dim name="w" size="64"/>
+                        <dim name="c" size="1"/>
+                    </shape>
+                </port>
+                <port id="pfc_ctx_in" name="ctx_in" dir="in" dtype="float32">
+                    <shape spec="b,f">
+                        <dim name="f" size="128"/>
+                    </shape>
+                </port>
+                <port id="pfc_control_out" name="control_out" dir="out" dtype="float32">
+                    <shape spec="b,f">
+                        <dim name="f" size="16"/>
+                    </shape>
+                </port>
+            </io>
+        </module>
+
+        <module id="m1" dt_ms="2" region="m1">
+            <io>
+                <port id="m1_in" name="policy_in" dir="in" dtype="float32">
+                    <shape spec="b,f">
+                        <dim name="f" size="16"/>
+                    </shape>
+                </port>
+                <port id="m1_motor_out" name="motor_out" dir="out" dtype="float32">
+                    <shape spec="b,j">
+                        <dim name="j" size="7"/>
+                    </shape>
+                </port>
+            </io>
+        </module>
+
+        <module id="cbl" dt_ms="1" region="cerebellum">
+            <species name="macaca mulatta" ncbi_taxid="9544"/>
+            <io>
+                <port id="cbl_copy_in" name="cortical_copy_in" dir="in" dtype="float32">
+                    <shape spec="b,f">
+                        <dim name="f" size="16"/>
+                    </shape>
+                </port>
+
+                <port id="cbl_err_in" name="error_in" dir="in" dtype="float32">
+                    <shape spec="b,f">
+                        <dim name="f" size="128"/>
+                    </shape>
+                </port>
+
+                <port id="cbl_adj_out" name="adjustment_out" dir="out" dtype="float32">
+                    <shape spec="b,f">
+                        <dim name="f" size="16"/>
+                    </shape>
+                </port>
+            </io>
+        </module>
+    </modules>
+
+    <port_groups>
+        <port_group id="vision_input">
+            <member ref="ppc_vis_in"/>
+            <member ref="pfc_vis_in"/>
+        </port_group>
+    </port_groups>
+
+    <connections>
+        <connection from="ppc_state_out" to="pfc_ctx_in"/>
+        <connection from="pfc_control_out" to="cbl_copy_in"/>
+        <connection from="ppc_state_out" to="cbl_err_in"/>
+        <connection from="pfc_control_out" to="m1_in"/>
+        <connection from="cbl_adj_out" to="m1_in"/>
+    </connections>
+
+    <observables>
+        <observable id="obs_pfc" source="pfc_control_out"/>
+        <observable id="obs_cbl" source="cbl_adj_out"/>
+        <observable id="obs_m1" source="m1_motor_out"/>
+    </observables>
+
+    <contract>
+        <sensor name="vision" modality="vision" maps_to_group="vision_input"/>
+        <actuator name="arm_torque" effector="arm" maps_from="m1_motor_out"/>
+    </contract>
+</model>
