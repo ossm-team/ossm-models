@@ -1,0 +1,1 @@
+from ossm_models.core.model import OSSMModel

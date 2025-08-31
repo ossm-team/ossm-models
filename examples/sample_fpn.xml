@@ -4,20 +4,20 @@
        xsi:schemaLocation="https://ossm.dev/sms/0.5 ../SMS.xsd">
 
     <metadata>
-        <name>fpn_cereb_grouped_min</name>
+        <name>FPN model</name>
         <version>0.1</version>
-        <date>2025-08-25</date>
+        <date>2025-05-25</date>
         <license>cc-by-4.0</license>
         <author>ossm-team</author>
         <keyword>frontoparietal</keyword>
         <keyword>cerebellum</keyword>
     </metadata>
 
-    <species name="homo sapiens" ncbi_taxid="9606" scope="model"/>
+    <species name="homo sapiens" ncbi_taxid="9606"/>
     <time_base dt_ms="1"/>
 
     <modules>
-        <module id="ppc" dt_ms="5" region="ppc">
+        <module id="ppc" dt_ms="5">
             <io>
                 <port id="ppc_vis_in" name="vis_in" dir="in" dtype="float32">
                     <shape spec="b,h,w,c">
@@ -32,9 +32,11 @@
                     </shape>
                 </port>
             </io>
+
+            <region id="BA7" atlas="Brodmann" />
         </module>
 
-        <module id="pfc" dt_ms="5" region="pfc">
+        <module id="pfc" dt_ms="5">
             <io>
                 <port id="pfc_vis_in" name="vis_in" dir="in" dtype="float32">
                     <shape spec="b,h,w,c">
@@ -54,9 +56,11 @@
                     </shape>
                 </port>
             </io>
+
+            <region id="BA8" atlas="Brodmann" />
         </module>
 
-        <module id="m1" dt_ms="2" region="m1">
+        <module id="m1" dt_ms="2">
             <io>
                 <port id="m1_in" name="policy_in" dir="in" dtype="float32">
                     <shape spec="b,f">
@@ -69,10 +73,13 @@
                     </shape>
                 </port>
             </io>
+
+            <region id="BA4" atlas="Brodmann" />
         </module>
 
-        <module id="cbl" dt_ms="1" region="cerebellum">
-            <species name="macaca mulatta" ncbi_taxid="9544"/>
+        <module id="cbl" dt_ms="1">
+            <species name="macaque" ncbi_taxid="9539"/>
+
             <io>
                 <port id="cbl_copy_in" name="cortical_copy_in" dir="in" dtype="float32">
                     <shape spec="b,f">
@@ -93,6 +100,32 @@
                 </port>
             </io>
         </module>
+
+        <sensor id="vision">
+            <io>
+                <port id="vision_out" dir="in" dtype="float32" name="vision_out">
+                    <shape spec="b,h,w,c">
+                        <dim name="h" size="64"/>
+                        <dim name="w" size="64"/>
+                        <dim name="c" size="1"/>
+                    </shape>
+                </port>
+            </io>
+
+            <organ id="eye" />
+        </sensor>
+
+        <actuator id="arm">
+            <io>
+                <port id="arm_in" dir="out" dtype="float32" name="arm_in">
+                    <shape spec="b,j">
+                        <dim name="j" size="7"/>
+                    </shape>
+                </port>
+            </io>
+
+            <bodypart id="arm_right" />
+        </actuator>
     </modules>
 
     <port_groups>
@@ -108,6 +141,9 @@
         <connection from="ppc_state_out" to="cbl_err_in"/>
         <connection from="pfc_control_out" to="m1_in"/>
         <connection from="cbl_adj_out" to="m1_in"/>
+
+        <connection from="m1_motor_out" to="arm_in"/>
+        <connection from="vision_out" to="ppc_vis_in"/>
     </connections>
 
     <observables>
@@ -116,8 +152,4 @@
         <observable id="obs_m1" source="m1_motor_out"/>
     </observables>
 
-    <contract>
-        <sensor name="vision" modality="vision" maps_to_group="vision_input"/>
-        <actuator name="arm_torque" effector="arm" maps_from="m1_motor_out"/>
-    </contract>
 </model>

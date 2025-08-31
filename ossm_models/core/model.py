@@ -1,27 +1,37 @@
 """ Model class following the OSSM standards v0.4."""
-import abc
-from typing import Dict, List, Tuple, Optional
-
+import os.path
 import xml.etree.ElementTree as ET
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
+
 import networkx as nx
-import numpy as np
+import ossm_base as base
+from ossm_base.model import OSSMModel
 
 from ossm_models.core.configs import NS
+from ossm_models.core.parsers import _parse_connection
+from ossm_models.core.parsers import _parse_metadata
+from ossm_models.core.parsers import _parse_module
+from ossm_models.core.parsers import _parse_observable
+from ossm_models.core.parsers import _parse_port_groups
+from ossm_models.core.parsers import _parse_species
+from ossm_models.core.sms_types import Actuator
+from ossm_models.core.sms_types import Connection
+from ossm_models.core.sms_types import Metadata
+from ossm_models.core.sms_types import Module
+from ossm_models.core.sms_types import ModuleCore
+from ossm_models.core.sms_types import Observable
+from ossm_models.core.sms_types import Port
+from ossm_models.core.sms_types import PortGroup
+from ossm_models.core.sms_types import Sensor
+from ossm_models.core.sms_types import Species
+from ossm_models.validation import ports_compatible
+from ossm_models.validation import validate_with_xsd
 
-from ossm_models.core.parsers import (
-    _parse_contract, _parse_metadata, _parse_module,
-    _parse_observable, _parse_port_groups, _parse_species,
-    _parse_connection
-)
 
-from ossm_models.core.types import (
-    Metadata, Species, Port, Module, Connection, Observable,
-    PortGroup, SensorBinding, ActuatorBinding, Contract
-)
-from ossm_models.validation import validate_with_xsd, ports_compatible, check_sensor_actuator_xor
-
-
-class SMSModel:
+class SMSModel(OSSMModel):
     
     def __init__(
         self,
@@ -29,25 +39,27 @@ class SMSModel:
         species: Optional[Species],
         time_base_dt_ms: Optional[float],
         modules: List[Module],
+        sensors: List[Sensor],
+        actuators: List[Actuator],
         connections: List[Connection],
         observables: List[Observable],
         port_groups: Dict[str, PortGroup],
-        contract: Optional[Contract],
     ):
         self.metadata = metadata
         self.species = species
         self.time_base_dt_ms = time_base_dt_ms
         self.modules = modules
+        self.sensors = sensors
+        self.actuators = actuators
         self.connections = connections
         self.observables = observables
         self.port_groups = port_groups
-        self.contract = contract
 
         # indices
-        self.module_by_id: Dict[str, Module] = {m.id: m for m in self.modules}
+        self.module_by_id: Dict[str, ModuleCore] = {m.id: m for m in self.module_types}
         self.port_by_id: Dict[str, Port] = {}
 
-        for m in self.modules:
+        for m in self.module_types:
             for p in m.ports:
                 if p.id in self.port_by_id:
                     raise ValueError(f"duplicate port id: {p.id}")
@@ -57,9 +69,19 @@ class SMSModel:
     def n_modules(self) -> int:
         return len(self.modules)
 
+    @property
+    def module_types(self) -> List[ModuleCore]:
+        return self.modules + self.sensors + self.actuators
+
     @classmethod
     def from_xml(cls, xml_path: str) -> "SMSModel":
-        validate_with_xsd(xml_path, "../SMS.xsd")
+        validate_with_xsd(
+            xml_path,
+            os.path.join(
+                os.path.dirname(os.path.realpath(__file__)),
+                "../../SMS.xsd"
+            )
+        )
 
         root = ET.parse(xml_path).getroot()
         md = _parse_metadata(root.find("sms:metadata", NS))
@@ -68,6 +90,9 @@ class SMSModel:
         time_base_dt_ms = float(tb.get("dt_ms")) if (tb is not None and tb.get("dt_ms")) else None
 
         modules = [_parse_module(e) for e in root.findall("sms:modules/sms:module", NS)]
+        sensors = [_parse_module(e) for e in root.findall("sms:modules/sms:sensor", NS)]
+        actuators = [_parse_module(e) for e in root.findall("sms:modules/sms:actuator", NS)]
+
         connections = []
         conns_node = root.find("sms:connections", NS)
         if conns_node is not None:
@@ -77,55 +102,30 @@ class SMSModel:
         if obs_node is not None:
             observables = [_parse_observable(o) for o in obs_node.findall("sms:observable", NS)]
         port_groups = _parse_port_groups(root)
-        contract = _parse_contract(root.find("sms:contract", NS))
 
-        model = cls(md, species, time_base_dt_ms, modules, connections, observables, port_groups, contract)
-        # optional semantic checks
-        if model.contract:
-            check_sensor_actuator_xor(model.contract.sensors, model.contract.actuators)
+        model = cls(md, species, time_base_dt_ms, modules, sensors, actuators, connections, observables, port_groups)
+
         return model
 
     def resolve_connection_ports(self, c: Connection) -> Tuple[Port, Port]:
         """ Return (from_port, to_port) for a connection. """
         return self.port_by_id[c.from_id], self.port_by_id[c.to_id]
 
-    def sensor_targets(self, s: SensorBinding) -> List[Port]:
-        if s.maps_to and s.maps_to_group:
-            raise ValueError(f"sensor {s.name}: both maps_to and maps_to_group set")
-        if s.maps_to:
-            return [self.port_by_id[s.maps_to]]
-        if s.maps_to_group:
-            group = self.port_groups.get(s.maps_to_group)
-            if not group:
-                raise KeyError(f"unknown port_group: {s.maps_to_group}")
-            return [self.port_by_id[pid] for pid in group.members]
-        return []
-
-    def actuator_sources(self, a: ActuatorBinding) -> List[Port]:
-        if a.maps_from and a.maps_from_group:
-            raise ValueError(f"actuator {a.name}: both maps_from and maps_from_group set")
-        if a.maps_from:
-            return [self.port_by_id[a.maps_from]]
-        if a.maps_from_group:
-            group = self.port_groups.get(a.maps_from_group)
-            if not group:
-                raise KeyError(f"unknown port_group: {a.maps_from_group}")
-            return [self.port_by_id[pid] for pid in group.members]
-        return []
-
     def build_graphs(self) -> tuple[nx.MultiDiGraph, nx.DiGraph]:
-        """
-        Return (port_graph, module_graph)
-        - port_graph nodes: ports (by id) + optional 'sensor:*' / 'actuator:*' nodes
-        - port_graph edges: connection, sensor_binding, actuator_binding
-        - module_graph nodes: modules
-        - module_graph edges: aggregated by module with 'port_pairs' list
-        """
+        """ Build and return the port graph and module graph. """
+
         port_g = nx.MultiDiGraph(name="sms_port_graph")
         mod_g = nx.DiGraph(name="sms_module_graph")
 
-        for m in self.modules:
-            mod_g.add_node(m.id, dt_ms=m.dt_ms, region=m.region)
+        for m in self.module_types:
+            if isinstance(m, Sensor):
+                mod_g.add_node(m.id, dt_ms=m.dt_ms, organ=m.organ.id if m.organ else None)
+            elif isinstance(m, Actuator):
+                mod_g.add_node(m.id, dt_ms=m.dt_ms, body_part=m.body_part.id if m.body_part else None)
+            elif isinstance(m, Module):
+                mod_g.add_node(m.id, dt_ms=m.dt_ms, region=m.region if m.region else None)
+            else:
+                raise NotImplementedError(m.id)
 
             for p in m.ports:
                 # flatten shape for attributes
@@ -145,8 +145,6 @@ class SMSModel:
                 for op in out_ports:
                     port_g.add_edge(ip.id, op.id, kind="internal")
 
-
-
         for c in self.connections:
             sp, dp = self.resolve_connection_ports(c)
             port_g.add_edge(sp.id, dp.id, kind="connection",
@@ -164,30 +162,11 @@ class SMSModel:
 
             me["port_pairs"].append((sp.id, dp.id))
 
-        if self.contract:
-            for s in self.contract.sensors:
-                targets = self.sensor_targets(s)
-                if targets:
-                    s_node = f"sensor:{s.name}"
-                    port_g.add_node(s_node, kind="sensor", modality=s.modality)
-                    for p in targets:
-                        port_g.add_edge(s_node, p.id, kind="sensor_binding")
-
-            for a in self.contract.actuators:
-                sources = self.actuator_sources(a)
-                if sources:
-                    a_node = f"actuator:{a.name}"
-                    port_g.add_node(a_node, kind="actuator", effector=a.effector)
-                    for p in sources:
-                        port_g.add_edge(p.id, a_node, kind="actuator_binding")
-
         return port_g, mod_g
 
     def check_connections_compatibility(self) -> List[Tuple[str, str]]:
-        """
-        Return a list of (src_port_id, dst_port_id) pairs that are incompatible
-        (dtype/modality/shape). Empty list ⇒ all good.
-        """
+        """ Check all connections for port compatibility. """
+
         mismatches: List[Tuple[str, str]] = []
         for c in self.connections:
             sp, dp = self.resolve_connection_ports(c)
@@ -239,42 +218,13 @@ class SMSModel:
         plt.show()
 
 
-class OSSMModel(SMSModel, abc.ABC):
-    """ Interface for sensorimotor models. Implements the OSSM modeling standards.
-
-    The interface standardizes the initialization and operation of models within the standards. The implementation
-    itself is left to the specific model.
-
-    Multiple extensions of the interface will exist for different autodifferentiation frameworks,
-    e.g. PyTorch or TensorFlow.
-    """
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    @abc.abstractmethod
-    def initialize(self) -> "OSSMModel":
-        """ Initialize the model before starting a simulation. Returns itself. """
-        pass
-
-    @abc.abstractmethod
-    def simulate(self) -> "OSSMModel":
-        """ Run a single timestep of the model simulation. Returns itself. """
-        pass
-
-    @abc.abstractmethod
-    def record(self) -> Dict[Observable, np.ndarray]:
-        """ Measure the observables of the model. """
-        pass
-
-
-class _TestOSSMModel(OSSMModel):
+class TestOSSMModel(SMSModel):
     """ A simple test implementation of the OSSMModel interface. """
 
     def initialize(self):
         print("initialize model")
 
-    def simulate(self):
+    def simulate(self, stimulus):
         print("simulate model")
 
     def record(self):
@@ -282,7 +232,7 @@ class _TestOSSMModel(OSSMModel):
 
 
 if __name__ == "__main__":
-    model = _TestOSSMModel.from_xml("../model-sample/sample_fpn.xml", )
+    model = TestOSSMModel.from_xml("../../examples/sample_fpn.xml", )
     port_g, mod_g = model.build_graphs()
 
     print(f"modules: {mod_g.number_of_nodes()} edges: {mod_g.number_of_edges()}")

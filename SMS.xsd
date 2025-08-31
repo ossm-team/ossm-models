@@ -17,7 +17,7 @@
         <xs:restriction base="xs:string">
             <xs:enumeration value="vision"/>
             <xs:enumeration value="audition"/>
-            <xs:enumeration value="somatosensory"/>
+            <xs:enumeration value="somatosensation"/>
             <xs:enumeration value="proprioception"/>
             <xs:enumeration value="interoception"/>
             <xs:enumeration value="vestibular"/>
@@ -88,14 +88,27 @@
     <xs:complexType name="species">
         <xs:attribute name="name" type="xs:string" use="required"/>
         <xs:attribute name="ncbi_taxid" type="xs:string" use="optional"/>
-        <xs:attribute name="scope" type="xs:string" use="optional"/>
     </xs:complexType>
 
     <!-- modules -->
-    <xs:complexType name="module">
+    <xs:complexType name="module_core">
+
         <xs:sequence>
-            <xs:element name="species" type="species" minOccurs="0"/>
+            <xs:element name="species" type="species" minOccurs="0">
+                <xs:annotation>
+                    <xs:documentation>
+                        Species that this module is derived from. If not specified, the model species is assumed.
+                    </xs:documentation>
+                </xs:annotation>
+            </xs:element>
+
             <xs:element name="io" minOccurs="0">
+                <xs:annotation>
+                    <xs:documentation>
+                        Input/output ports for this module.
+                    </xs:documentation>
+                </xs:annotation>
+
                 <xs:complexType>
                     <xs:sequence>
                         <xs:element name="port" type="port" minOccurs="0" maxOccurs="unbounded"/>
@@ -103,7 +116,15 @@
                 </xs:complexType>
             </xs:element>
         </xs:sequence>
-        <xs:attribute name="id" type="xs:ID" use="required"/>
+
+        <xs:attribute name="id" type="xs:ID" use="required">
+            <xs:annotation>
+                <xs:documentation>
+                    Unique identifier for this module within the model.
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+
         <xs:attribute name="dt_ms" type="xs:decimal" use="optional">
             <xs:annotation>
                 <xs:documentation>
@@ -111,14 +132,97 @@
                 </xs:documentation>
             </xs:annotation>
         </xs:attribute>
-        <xs:attribute name="region" type="xs:string" use="optional"/>
-        <xs:attribute name="description" type="xs:string" use="optional"/>
+
+        <xs:attribute name="description" type="xs:string" use="optional">
+            <xs:annotation>
+                <xs:documentation>
+                    Optional description of this module.
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+
     </xs:complexType>
+
+    <xs:complexType name="module_type">
+        <xs:complexContent>
+            <xs:extension base="module_core">
+                <xs:sequence>
+                    <xs:element name="region" minOccurs="0" maxOccurs="unbounded">
+                        <xs:annotation>
+                            <xs:documentation>
+                                Anatomical or functional region this module is associated with,
+                                along with the parcellation system or atlas in which it is defined.
+                            </xs:documentation>
+                        </xs:annotation>
+                        <xs:complexType>
+                            <xs:attribute name="id" type="xs:string" use="required"/>
+                            <xs:attribute name="atlas" type="xs:string" use="required"/>
+                        </xs:complexType>
+                    </xs:element>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="sensor_type">
+        <xs:complexContent>
+            <xs:extension base="module_core">
+                <xs:sequence>
+                    <xs:element name="organ" minOccurs="0" maxOccurs="unbounded">
+                        <xs:annotation>
+                            <xs:documentation>
+                                Body organ this sensor is associated with.
+                            </xs:documentation>
+                        </xs:annotation>
+
+                        <xs:complexType>
+                            <xs:attribute name="id" type="xs:string" use="required"/>
+                        </xs:complexType>
+                    </xs:element>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="actuator_type">
+        <xs:complexContent>
+            <xs:extension base="module_core">
+                <xs:sequence>
+                    <xs:element name="bodypart" minOccurs="0" maxOccurs="unbounded">
+                        <xs:annotation>
+                            <xs:documentation>
+                                Body part this actuator is associated with.
+                            </xs:documentation>
+                        </xs:annotation>
+
+                        <xs:complexType>
+                            <xs:attribute name="id" type="xs:string" use="required"/>
+                        </xs:complexType>
+                    </xs:element>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
 
     <!-- connections -->
     <xs:complexType name="connection">
-        <xs:attribute name="from" type="xs:IDREF" use="required"/>  <!-- -> port/@id -->
-        <xs:attribute name="to" type="xs:IDREF" use="required"/>  <!-- -> port/@id -->
+        <xs:attribute name="from" type="xs:IDREF" use="required">
+            <xs:annotation>
+                <xs:documentation>
+                    Port that is the source of this connection.
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+
+        <xs:attribute name="to" type="xs:IDREF" use="required">
+            <xs:annotation>
+                <xs:documentation>
+                    Port that is the target of this connection.
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+
         <xs:attribute name="delay_ms" type="xs:decimal" use="optional">
             <xs:annotation>
                 <xs:documentation>
@@ -131,7 +235,15 @@
     <!-- observables -->
     <xs:complexType name="observable">
         <xs:attribute name="id" type="xs:ID" use="required"/>
-        <xs:attribute name="source" type="xs:IDREF" use="required"/> <!-- -> port/@id -->
+
+        <xs:attribute name="source" type="xs:IDREF" use="required">
+            <xs:annotation>
+                <xs:documentation>
+                    Port that is the source of this observable.
+                </xs:documentation>
+            </xs:annotation>
+        </xs:attribute>
+
         <xs:attribute name="dt_ms" type="xs:decimal" use="optional"/>
     </xs:complexType>
 
@@ -144,32 +256,8 @@
                 </xs:complexType>
             </xs:element>
         </xs:sequence>
+
         <xs:attribute name="id" type="xs:ID" use="required"/>
-        <xs:attribute name="note" type="xs:string" use="optional"/>
-    </xs:complexType>
-
-    <xs:complexType name="contract">
-
-        <xs:sequence>
-            <xs:element name="sensor" minOccurs="0" maxOccurs="unbounded">
-                <xs:complexType>
-                    <xs:attribute name="name" type="xs:string" use="required"/>
-                    <xs:attribute name="modality" type="modality_type" use="required"/>
-                    <xs:attribute name="maps_to" type="xs:IDREF" use="optional"/>         <!-- -> port/@id -->
-                    <xs:attribute name="maps_to_group" type="xs:IDREF" use="optional"/>   <!-- -> port_group/@id -->
-                </xs:complexType>
-            </xs:element>
-
-            <xs:element name="actuator" minOccurs="0" maxOccurs="unbounded">
-                <xs:complexType>
-                    <xs:attribute name="name" type="xs:string" use="required"/>
-                    <xs:attribute name="effector" type="xs:string" use="optional"/>
-                    <xs:attribute name="maps_from" type="xs:IDREF" use="optional"/>       <!-- -> port/@id -->
-                    <xs:attribute name="maps_from_group" type="xs:IDREF" use="optional"/> <!-- -> port_group/@id -->
-                </xs:complexType>
-            </xs:element>
-        </xs:sequence>
-
     </xs:complexType>
 
     <!-- root -->
@@ -188,7 +276,9 @@
                 <xs:element name="modules">
                     <xs:complexType>
                         <xs:sequence>
-                            <xs:element name="module" type="module" minOccurs="1" maxOccurs="unbounded"/>
+                            <xs:element name="module" type="module_type" minOccurs="1" maxOccurs="unbounded"/>
+                            <xs:element name="sensor" type="sensor_type" minOccurs="1" maxOccurs="unbounded"/>
+                            <xs:element name="actuator" type="actuator_type" minOccurs="1" maxOccurs="unbounded"/>
                         </xs:sequence>
                     </xs:complexType>
                 </xs:element>
@@ -217,30 +307,19 @@
                     </xs:complexType>
                 </xs:element>
 
-                <xs:element name="contract" type="contract" minOccurs="0"/>
             </xs:sequence>
         </xs:complexType>
 
         <!-- keys / refs (XSD 1.0‑friendly) -->
-        <xs:key name="k_module_id">
-            <xs:selector xpath="modules/module"/>
+        <xs:key name="k_node_id">
+            <xs:selector xpath="modules/module | modules/sensor | modules/actuator"/>
             <xs:field xpath="@id"/>
         </xs:key>
 
         <xs:key name="k_port_id">
-            <xs:selector xpath="modules/module/io/port"/>
+            <xs:selector xpath="modules/module/io/port | modules/sensor/io/port | modules/actuator/io/port"/>
             <xs:field xpath="@id"/>
         </xs:key>
-
-        <xs:key name="k_group_id">
-            <xs:selector xpath="port_groups/port_group"/>
-            <xs:field xpath="@id"/>
-        </xs:key>
-
-        <xs:keyref name="r_group_member_is_port" refer="k_port_id">
-            <xs:selector xpath="port_groups/port_group/member"/>
-            <xs:field xpath="@ref"/>
-        </xs:keyref>
 
         <xs:keyref name="r_conn_from_id" refer="k_port_id">
             <xs:selector xpath="connections/connection"/>
@@ -250,6 +329,16 @@
         <xs:keyref name="r_conn_to_id" refer="k_port_id">
             <xs:selector xpath="connections/connection"/>
             <xs:field xpath="@to"/>
+        </xs:keyref>
+
+        <xs:key name="k_group_id">
+            <xs:selector xpath="port_groups/port_group"/>
+            <xs:field xpath="@id"/>
+        </xs:key>
+
+        <xs:keyref name="r_group_member_is_port" refer="k_port_id">
+            <xs:selector xpath="port_groups/port_group/member"/>
+            <xs:field xpath="@ref"/>
         </xs:keyref>
 
         <xs:keyref name="r_obs_source_is_port" refer="k_port_id">

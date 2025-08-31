@@ -1,2 +1,0 @@
-xmlschema==3.4.2
-networkx==3.5

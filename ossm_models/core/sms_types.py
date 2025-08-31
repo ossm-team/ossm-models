@@ -1,9 +1,12 @@
 # sms_types.py
 from __future__ import annotations
+
+import abc
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Tuple
 
-# ----- core datatypes (purely declarative) -----
+import ossm_base as base
+
 
 @dataclass
 class Metadata:
@@ -41,12 +44,39 @@ class Port:
     module_id: Optional[str] = None
 
 @dataclass
-class Module:
+class Region:
+    id: str
+    name: Optional[str] = None
+    atlas: Optional[str] = None
+
+@dataclass
+class Organ:
+    id: str
+    name: Optional[str] = None
+
+@dataclass
+class BodyPart:
+    id: str
+    name: Optional[str] = None
+
+@dataclass
+class ModuleCore(abc.ABC):
     id: str
     dt_ms: Optional[float] = None
-    region: Optional[str] = None
     species: Optional[Species] = None
     ports: List[Port] = field(default_factory=list)
+
+@dataclass
+class Module(ModuleCore):
+    region: Optional[Region] = None
+
+@dataclass
+class Sensor(ModuleCore):
+    organ: Optional[Organ] = None
+
+@dataclass
+class Actuator(ModuleCore):
+    body_part: Optional[BodyPart] = None
 
 @dataclass
 class Connection:
@@ -54,8 +84,8 @@ class Connection:
     to_id: str    # port id
     delay_ms: Optional[float] = None
 
-@dataclass
-class Observable:
+@dataclass(kw_only=True)
+class Observable(base.types.Observable):
     id: str
     source_module: str
     source: str
@@ -65,23 +95,3 @@ class Observable:
 class PortGroup:
     id: str
     members: List[str]  # list of port IDs
-
-@dataclass
-class SensorBinding:
-    name: str
-    modality: str
-    maps_to: Optional[str] = None         # port id
-    maps_to_group: Optional[str] = None   # group id
-
-@dataclass
-class ActuatorBinding:
-    name: str
-    effector: Optional[str] = None
-    maps_from: Optional[str] = None
-    maps_from_group: Optional[str] = None
-
-@dataclass
-class Contract:
-    dt_ms: Optional[float] = None
-    sensors: List[SensorBinding] = field(default_factory=list)
-    actuators: List[ActuatorBinding] = field(default_factory=list)

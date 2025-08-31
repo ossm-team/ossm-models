@@ -1,0 +1,26 @@
+[build-system]
+requires = ["hatchling>=1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ossm_models"
+version = "0.1.0"
+description = "Sensorimotor Modeling Standard (SMS) and model zoo for OSSM."
+readme = "README.md"
+license = { text = "GPL-3.0" }
+authors = [
+    { name = "Tonio Weidler", email = "research@tonioweidler.de" },
+    { name = "Mario Senden", email = "mario.senden@maastrichtuniversity.nl" }
+]
+requires-python = ">=3.11"
+keywords = ["computational neuroscience", "sensorimotor", "standards", "open science"]
+
+dependencies = [
+    "ossm-base>=0.1.0",
+    "xmlschema>=4.1.0",
+    "networkx>=3.5",
+]
+
+[project.urls]
+Homepage = "https://github.com/ossm-team/ossm-models"
+Issues = "https://github.com/ossm-team/ossm-models/issues"

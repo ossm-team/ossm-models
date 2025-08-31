@@ -1,43 +1,18 @@
+import functools
 from typing import Dict
 from typing import List
 from typing import Optional
+from typing import Union
 from xml.etree import ElementTree as ET
 
 from ossm_models.core.configs import NS
+from ossm_models.core.sms_types import Actuator
 
-from ossm_models.core.types import (
-    ActuatorBinding, Connection, Contract, Dim, Metadata, Module,
-    Observable, Port, PortGroup, SensorBinding, Shape, Species
+from ossm_models.core.sms_types import (
+    Connection, Dim, Metadata, Module,
+    Observable, Port, PortGroup, Shape, Species
 )
-
-
-def _parse_contract(e: Optional[ET.Element]) -> Optional[Contract]:
-    if e is None:
-        return None
-    rate = e.get("dt_ms")
-
-    sensors: List[SensorBinding] = []
-    for s in e.findall("sms:sensor", NS):
-        sensors.append(SensorBinding(
-            name=s.get("name"),
-            modality=s.get("modality"),
-            maps_to=s.get("maps_to"),
-            maps_to_group=s.get("maps_to_group"),
-        ))
-
-    actuators: List[ActuatorBinding] = []
-    for a in e.findall("sms:actuator", NS):
-        actuators.append(ActuatorBinding(
-            name=a.get("name"),
-            effector=a.get("effector"),
-            maps_from=a.get("maps_from"),
-            maps_from_group=a.get("maps_from_group"),
-        ))
-    return Contract(
-        dt_ms=None if rate is None else float(rate),
-        sensors=sensors,
-        actuators=actuators,
-    )
+from ossm_models.core.sms_types import Sensor
 
 
 def _parse_port_groups(root: ET.Element) -> Dict[str, PortGroup]:
@@ -72,19 +47,31 @@ def _parse_connection(e: ET.Element) -> Connection:
     )
 
 
-def _parse_module(e: ET.Element) -> Module:
+def _parse_module(e: ET.Element) -> Union[Module, Sensor, Actuator]:
+    mtype = {"sensor": Sensor,
+             "actuator": Actuator,
+             "module": Module}.get(e.tag.split("}")[1], Module)
+
     io = e.find("sms:io", NS)
     module_id = e.get("id")
     ports: List[Port] = []
     if io is not None:
         ports = [_parse_port(p, module_id) for p in io.findall("sms:port", NS)]
     dt = e.get("dt_ms")
-    return Module(
+
+    if mtype is Sensor:
+        region_like = {"organ": e.get("organ")}
+    elif mtype is Actuator:
+        region_like = {"body_part": e.get("bodypart")}
+    else:
+        region_like = {"region": e.get("region")}
+
+    return mtype(
         id=module_id,
         dt_ms=None if dt is None else float(dt),
-        region=e.get("region"),
         species=_parse_species(e.find("sms:species", NS)),
         ports=ports,
+        **region_like,
     )
 
 

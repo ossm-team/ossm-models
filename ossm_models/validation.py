@@ -2,20 +2,14 @@
 from __future__ import annotations
 from typing import Iterable, List, Dict, Optional
 import xmlschema
-from ossm_models.core.types import Port, SensorBinding, ActuatorBinding
+from ossm_models.core.sms_types import Port
 
-# ----- XSD validation -----
 
 def validate_with_xsd(xml_path: str, xsd_path: str) -> xmlschema.XMLSchema:
-    """
-    Validate an instance XML against the schema. Raises on error.
-    Returns the loaded schema object for optional reuse.
-    """
     schema = xmlschema.XMLSchema(xsd_path)
-    schema.validate(xml_path)  # raises XMLSchemaValidationError on failure
+    schema.validate(xml_path)
     return schema
 
-# ----- light semantic checks (beyond XSD) -----
 
 def axes(spec: Optional[str]) -> Optional[List[str]]:
     return None if not spec else [a.strip() for a in spec.split(",") if a.strip()]
@@ -30,7 +24,6 @@ def dims_map(port: Port) -> Dict[str, Optional[int]]:
     return out
 
 def ports_compatible(src: Port, dst: Port) -> bool:
-    # check dtype compatibility
     if src.dtype != dst.dtype:
         return False
 
@@ -52,20 +45,3 @@ def ports_compatible(src: Port, dst: Port) -> bool:
         if vs != -1 and vd != -1 and vs != vd:
             return False
     return True
-
-def check_sensor_actuator_xor(sensors: Iterable[SensorBinding],
-                              actuators: Iterable[ActuatorBinding]) -> None:
-    """
-    Ensure each sensor has exactly one of maps_to/maps_to_group set (same for actuators).
-    Raise ValueError on violation.
-    """
-    for s in sensors:
-        both = bool(s.maps_to) and bool(s.maps_to_group)
-        none = not s.maps_to and not s.maps_to_group
-        if both or none:
-            raise ValueError(f"sensor '{s.name}': set exactly one of maps_to or maps_to_group")
-    for a in actuators:
-        both = bool(a.maps_from) and bool(a.maps_from_group)
-        none = not a.maps_from and not a.maps_from_group
-        if both or none:
-            raise ValueError(f"actuator '{a.name}': set exactly one of maps_from or maps_from_group")
